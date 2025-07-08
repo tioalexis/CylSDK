@@ -1,0 +1,15 @@
+{
+  "name": "com.github.tioalexis.cylsdk",
+  "version": "1.0.0",
+  "displayName": "CylSDK",
+  "description": "CylSDK is a Unity package that provides a set of tools and libraries for developing games and applications with advanced features.",
+  "unity": "6000.1",
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1"
+  },
+  "author": {
+    "name": "Tio Alexis",
+    "email": "tioalexis@protonmail.com",
+    "url": "https://github.com/tioalexis"
+  }
+}
