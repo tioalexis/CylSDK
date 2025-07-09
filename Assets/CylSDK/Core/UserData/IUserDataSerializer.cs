@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace CylSDK.Core.UserData
 {
     /// <summary>
@@ -11,7 +13,7 @@ namespace CylSDK.Core.UserData
         /// </summary>
         /// <param name="userData">The user data model to serialize.</param>
         /// <returns>A string representation of the user data model.</returns>
-        string Serialize(IUserDataModel userData);
+        Awaitable<string> SerializeAsync(IUserDataModel userData);
         
         /// <summary>
         /// Deserializes a string representation of user data back into a user data model.
@@ -19,6 +21,6 @@ namespace CylSDK.Core.UserData
         /// <param name="serializedData">The serialized user data string.</param>
         /// <typeparam name="T">The type of user data model to deserialize into. It must implement IUserDataModel.</typeparam>
         /// <returns>An instance of the user data model type T populated with the deserialized data.</returns>
-        T Deserialize<T>(string serializedData) where T : IUserDataModel;
+        Awaitable<T> DeserializeAsync<T>(string serializedData) where T : IUserDataModel;
     }
 }

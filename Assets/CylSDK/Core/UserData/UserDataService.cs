@@ -1,8 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using CylSDK.Core.App;
+using CylSDK.Core.UserData.Impl;
 using CylSDK.Utils;
 using UnityEngine;
+using AppContext = CylSDK.Core.App.AppContext;
+using ILogger = CylSDK.Core.Logger.ILogger;
 
 namespace CylSDK.Core.UserData
 {
@@ -12,24 +16,21 @@ namespace CylSDK.Core.UserData
     /// provides methods to load and save user data using that provider.
     /// </summary>
     /// <typeparam name="T">The type of user data model that implements IUserDataModel.</typeparam>
-    public class UserDataService<T> where T : IUserDataModel
+    public class UserDataService<T> : IService where T : IUserDataModel
     {
         /// <summary>
         /// How often the save queue is checked for new save requests.
         /// </summary>
         private const float SaveQueueCheckInterval = 1.0f / 16;
-        
-        private struct SaveRequest
-        {
-            public T UserDataSnapshot;
-            public DateTime RequestTime;
-        }
-        
+
         private readonly IUserDataProvider _userDataProvider;
         private readonly IUserDataSerializer _userDataSerializer;
-        private readonly Queue<SaveRequest> _saveQueue = new();
-        
         private readonly CancellationTokenSource _saveQueueCts;
+        private readonly List<SaveUserDataRequest<T>> _saveQueue = new();
+        private readonly ISaveUserDataRequestsSerializer _saveRequestsSerializer = new JsonSaveRequestsSerializer();
+        private readonly ISaveUserDataRequestsLoader _saveRequestsLoader = new PlayerPrefsSaveUserDataRequestLoader();
+
+        private ILogger _logger;
         
         /// <summary>
         /// The user data loaded or saved by this service.
@@ -46,27 +47,39 @@ namespace CylSDK.Core.UserData
         {
             _userDataProvider = userDataProvider ?? throw new ArgumentNullException(nameof(userDataProvider));
             _userDataSerializer = userDataSerializer ?? throw new ArgumentNullException(nameof(userDataSerializer));
-            
-            // Start processing the save queue in a separate thread
             _saveQueueCts = new CancellationTokenSource();
-            ProcessSaveQueueAsync().FireAndForget();
         }
 
-        ~UserDataService()
+        /// <summary>
+        /// Initializes the user data service.
+        /// </summary>
+        /// <param name="context">The application context that provides dependencies.</param>
+        /// <returns>An awaitable task that completes when the service is initialized.</returns>
+        public Awaitable InitializeAsync(AppContext context)
+        {
+            _logger = context.Logger;
+            
+            LoadRequestsFromDisk();
+
+            ProcessSaveQueueAsync(_saveQueueCts.Token)
+                .FireAndForget();
+
+            return Awaitable.EndOfFrameAsync();
+        }
+
+        /// <summary>
+        /// Notifies the service to perform any necessary cleanup or teardown operations.
+        /// </summary>
+        public void Teardown()
         {
             // Store the requests into disk for later processing
-            if (_saveQueue.Count > 0)
-            {
-                Debug.LogWarning("UserDataService is being finalized with pending save requests. " +
-                                 "These requests will not be processed.");
-                _saveQueue.Clear();
-            }
-            
+            SaveRequestsToDisk();
+
             // Cancel the save queue processing when the service is disposed
             _saveQueueCts.Cancel();
             _saveQueueCts.Dispose();
         }
-        
+
         /// <summary>
         /// Creates a new user data instance using the provided user data provider.
         /// </summary>
@@ -83,51 +96,95 @@ namespace CylSDK.Core.UserData
         /// <returns>An awaitable task that returns the loaded user data.</returns>
         public async Awaitable<T> LoadUserDataAsync()
         {
-            UserData = (T)await _userDataProvider.LoadUserDataAsync(_userDataSerializer);
+            UserData = (T)await _userDataProvider.ReadUserDataAsync(_userDataSerializer);
             return UserData;
         }
-        
+
         /// <summary>
         /// Enqueues a save request for the current user data.
         /// </summary>
         public void SaveUserData()
         {
-            var saveRequest = new SaveRequest
+            var saveRequest = new SaveUserDataRequest<T>
             {
-                UserDataSnapshot = UserData,
-                RequestTime = DateTime.UtcNow
+                userDataSnapshot = UserData,
+                requestTime = DateTime.UtcNow
             };
-            
-            _saveQueue.Enqueue(saveRequest);
+
+            _saveQueue.Add(saveRequest);
         }
-        
-        private async Awaitable ProcessSaveQueueAsync() 
+
+        private async Awaitable ProcessSaveQueueAsync(CancellationToken cancellationToken = default)
         {
             await Awaitable.MainThreadAsync();
-            
+
             // Periodically check the save queue and process requests
             while (!_saveQueueCts.IsCancellationRequested)
             {
                 if (_saveQueue.Count > 0)
                 {
-                    var saveRequest = _saveQueue.Dequeue();
-                    await _userDataProvider.SaveUserDataAsync(saveRequest.UserDataSnapshot, _userDataSerializer);
+                    var saveRequest = _saveQueue[0];
+                    _saveQueue.RemoveAt(0);
+                    await _userDataProvider.WriteUserDataAsync(saveRequest.userDataSnapshot, _userDataSerializer);
+
+                    _logger?.LogInfo(_saveQueue.Count == 0
+                        ? "All save requests processed successfully."
+                        : $"Processed save request from {saveRequest.requestTime}. {_saveQueue.Count} remaining.");
                 }
-                
+
                 // Wait for a short period before checking the queue again
-                await Awaitable.WaitForSecondsAsync(SaveQueueCheckInterval);
+                await Awaitable.WaitForSecondsAsync(SaveQueueCheckInterval, cancellationToken);
             }
+        }
+
+        private void SaveRequestsToDisk()
+        {
+            if (_saveQueue.Count <= 0) return;
             
-            // When cancellation is requested, ensure all remaining save requests are processed
-            while (_saveQueue.Count > 0)
-            {
-                var saveRequest = _saveQueue.Dequeue();
-                await _userDataProvider.SaveUserDataAsync(saveRequest.UserDataSnapshot, _userDataSerializer);
-            }
-            
-            // Clean up the cancellation token source
-            _saveQueueCts.Dispose();
+            var serializedData = _saveRequestsSerializer.Serialize(_saveQueue);
+            _saveRequestsLoader.Save(serializedData);
             _saveQueue.Clear();
         }
+
+        private void LoadRequestsFromDisk()
+        {
+            var serializedData = _saveRequestsLoader.Load();
+            if (string.IsNullOrWhiteSpace(serializedData)) return;
+
+            var requests = _saveRequestsSerializer.Deserialize<T>(serializedData);
+            foreach (var request in requests)
+            {
+                if (request.userDataSnapshot is { } userData)
+                {
+                    _saveQueue.Add(new SaveUserDataRequest<T>
+                    {
+                        userDataSnapshot = userData,
+                        requestTime = request.requestTime
+                    });
+                }
+                else
+                {
+                    _logger?.LogError($"Invalid user data type in saved request: {request.userDataSnapshot.GetType()}");
+                }
+            }
+            
+            // Sort queue by request time to ensure the oldest requests are processed first
+            _saveQueue.Sort((a, b) => a.requestTime.CompareTo(b.requestTime));
+            
+            _logger?.LogInfo($"Loaded {_saveQueue.Count} save requests from disk.");
+            _saveRequestsLoader.Clear();
+        }
+        
+#if UNITY_EDITOR
+        /// <summary>
+        /// (Editor Only) Clears the save requests in the editor.
+        /// </summary>
+        public void ClearSaveRequestsInEditor()
+        {
+            _saveQueue.Clear();
+            _saveRequestsLoader.Clear();
+            _logger?.LogInfo("Editor cleared save requests.");
+        }
+#endif
     }
 }

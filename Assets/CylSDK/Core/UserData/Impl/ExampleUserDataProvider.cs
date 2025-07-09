@@ -19,7 +19,7 @@ namespace CylSDK.Core.UserData.Impl
             throw new System.NotImplementedException();
         }
 
-        public async Awaitable<IUserDataModel> LoadUserDataAsync(IUserDataSerializer serializer)
+        public async Awaitable<IUserDataModel> ReadUserDataAsync(IUserDataSerializer serializer)
         {
             // This method should load user data asynchronously using the provided serializer.
             // In a real implementation, you would typically retrieve the user data from a storage mechanism
@@ -28,7 +28,7 @@ namespace CylSDK.Core.UserData.Impl
             throw new System.NotImplementedException();
         }
 
-        public async Awaitable SaveUserDataAsync(IUserDataModel userData, IUserDataSerializer serializer)
+        public async Awaitable WriteUserDataAsync(IUserDataModel userData, IUserDataSerializer serializer)
         {
             // This method should save the user data model asynchronously using the provided serializer.
             // In a real implementation, you would typically serialize the user data model to a string or binary format
