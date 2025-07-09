@@ -1,4 +1,6 @@
 using CylSDK.Core.Logger;
+using UnityEngine;
+using ILogger = CylSDK.Core.Logger.ILogger;
 
 namespace CylSDK.Core.App
 {
@@ -36,6 +38,19 @@ namespace CylSDK.Core.App
         ~AppContext()
         {
             Teardown();
+        }
+
+        /// <summary>
+        /// Initializes the application context and all registered services asynchronously.
+        /// This method should be called once at the start of the application lifecycle.
+        /// This method will not be called automatically, so it must be invoked explicitly by the application.
+        /// </summary>
+        public async Awaitable InitializeAsync()
+        {
+            foreach (var service in ServiceLocator.GetAllServices())
+            {
+                await service.InitializeAsync(this);
+            }
         }
 
         /// <summary>
