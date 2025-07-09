@@ -1,0 +1,16 @@
+{
+    "name": "CylSDK.Core",
+    "rootNamespace": "",
+    "references": [
+        "GUID:807ad1f346c6774bd8d15b5c8d3fd5bd"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
