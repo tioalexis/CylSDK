@@ -51,7 +51,7 @@ namespace CylSDK.Hexagons.Tests.PlayMode
             Assert.IsTrue(added);
             Assert.IsNotNull(_grid.GetElement(2, 2));
 
-            var removed = _grid.RemoveElement(new Hex(2, 2));
+            var removed = _grid.RemoveElement(Hex.CreateFromOffset(2, 2));
             Assert.IsTrue(removed);
             Assert.IsNull(_grid.GetElement(2, 2));
         }
@@ -65,7 +65,7 @@ namespace CylSDK.Hexagons.Tests.PlayMode
             _grid.AddElement(center, 2, 2);
             _grid.AddElement(neighbor, 2, 3);
 
-            var count = _grid.CountNeighbors(new Hex(2, 2));
+            var count = _grid.CountNeighbors(Hex.CreateFromOffset(2, 2));
             Assert.GreaterOrEqual(count, 1);
         }
 
@@ -80,7 +80,7 @@ namespace CylSDK.Hexagons.Tests.PlayMode
         [Test]
         public void GetWorldPosition_ReturnsVector()
         {
-            var pos = _grid.GetWorldPosition(new Hex(1, 1));
+            var pos = _grid.GetWorldPosition(Hex.CreateFromOffset(1, 1));
             Assert.IsInstanceOf<Vector3>(pos);
         }
 
