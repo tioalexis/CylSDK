@@ -4,10 +4,21 @@ using ILogger = CylSDK.Core.Logger.ILogger;
 
 namespace CylSDK.Core.App
 {
+    /// <summary>
+    /// Represents a service that can be registered with the ServiceLocator.
+    /// </summary>
     public interface IService
     {
+        /// <summary>
+        /// Initializes the service asynchronously.
+        /// </summary>
+        /// <param name="context">The application context that provides dependencies.</param>
+        /// <returns>An awaitable task that completes when the service is initialized.</returns>
         Awaitable InitializeAsync(AppContext context);
 
+        /// <summary>
+        /// Notifies the service to perform any necessary cleanup or teardown operations.
+        /// </summary>
         void Teardown();
     }
     
@@ -25,6 +36,10 @@ namespace CylSDK.Core.App
             _logger = context.Logger;
         }
         
+        /// <summary>
+        /// Retrieves a list of all registered services.
+        /// </summary>
+        /// <returns>A list of all registered services.</returns>
         public List<IService> GetAllServices()
         {
             return new List<IService>(_services.Values);
