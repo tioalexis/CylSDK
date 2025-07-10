@@ -21,10 +21,11 @@ namespace CylSDK.Core.SceneTransition
         }
         
         /// <inheritdoc />
-        public async Awaitable InitializeAsync(AppContext context)
+        public Awaitable InitializeAsync(AppContext context)
         {
-            // No initialization needed for this service.
-            await Awaitable.MainThreadAsync();
+            var completionSource = new AwaitableCompletionSource();
+            completionSource.SetResult();
+            return completionSource.Awaitable;
         }
 
         /// <inheritdoc />
