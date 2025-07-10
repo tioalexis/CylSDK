@@ -5,7 +5,10 @@ namespace CylSDK.Core.ProgressFlags.Impl
 {
     /// <summary>
     /// Serializes and deserializes progress flags using CSV format.
+<<<<<<< HEAD
     /// Only keys that are true will be included in the serialized output.
+=======
+>>>>>>> origin/dev
     /// </summary>
     public class CsvProgressFlagsSerializer : IProgressFlagsSerializer
     {
