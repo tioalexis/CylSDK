@@ -1,6 +1,6 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
-using ILogger = CylSDK.Core.Logger.ILogger;
 
 namespace CylSDK.Core.App
 {
@@ -28,12 +28,11 @@ namespace CylSDK.Core.App
     /// </summary>
     public class ServiceLocator
     {
-        private readonly ILogger _logger;
-        private readonly Dictionary<System.Type, IService> _services = new();
+        private readonly Dictionary<Type, IService> _services = new();
 
         public ServiceLocator(AppContext context)
         {
-            _logger = context.Logger;
+            
         }
         
         /// <summary>
@@ -55,7 +54,7 @@ namespace CylSDK.Core.App
             var type = typeof(T);
             if (_services.ContainsKey(type))
             {
-                _logger.LogWarning($"Service {type.Name} already registered. Existing service will be replaced.");
+                Debug.LogWarning($"Service of type {type} is already registered. Existing service will be replaced.");
             }
             
             _services[type] = service;

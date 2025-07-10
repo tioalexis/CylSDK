@@ -1,6 +1,4 @@
-using CylSDK.Core.Logger;
 using UnityEngine;
-using ILogger = CylSDK.Core.Logger.ILogger;
 
 namespace CylSDK.Core.App
 {
@@ -14,11 +12,6 @@ namespace CylSDK.Core.App
     public class AppContext
     {
         /// <summary>
-        /// The logger used for logging messages throughout the application.
-        /// </summary>
-        public ILogger Logger { get; private set; }
-        
-        /// <summary>
         /// The service locator used to manage and retrieve services throughout the application.
         /// </summary>
         public ServiceLocator ServiceLocator { get; private set; }
@@ -28,7 +21,6 @@ namespace CylSDK.Core.App
         /// </summary>
         public AppContext()
         {
-            Logger = new DebugLogger();
             ServiceLocator = new ServiceLocator(this);
         }
 

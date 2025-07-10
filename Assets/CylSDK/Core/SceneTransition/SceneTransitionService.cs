@@ -78,7 +78,7 @@ namespace CylSDK.Core.SceneTransition
             var asyncOperation = SceneManager.LoadSceneAsync(sceneName);
             if (asyncOperation == null)
             {
-                appContext.Logger.LogError($"Failed to load scene '{sceneName}': Async operation is null.");
+                Debug.LogError($"Failed to load scene '{sceneName}'. SceneManager returned null.");
                 if (View != null)
                     await View.HideLoadingScreenAsync();
                 return;

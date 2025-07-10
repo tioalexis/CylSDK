@@ -6,7 +6,6 @@ using CylSDK.Core.UserData.Impl;
 using CylSDK.Utils;
 using UnityEngine;
 using AppContext = CylSDK.Core.App.AppContext;
-using ILogger = CylSDK.Core.Logger.ILogger;
 
 namespace CylSDK.Core.UserData
 {
@@ -29,8 +28,6 @@ namespace CylSDK.Core.UserData
         private readonly List<SaveUserDataRequest<T>> _saveQueue = new();
         private readonly ISaveUserDataRequestsSerializer _saveRequestsSerializer = new JsonSaveRequestsSerializer();
         private readonly ISaveUserDataRequestsLoader _saveRequestsLoader = new PlayerPrefsSaveUserDataRequestLoader();
-
-        private ILogger _logger;
         
         /// <summary>
         /// The user data loaded or saved by this service.
@@ -57,8 +54,6 @@ namespace CylSDK.Core.UserData
         /// <returns>An awaitable task that completes when the service is initialized.</returns>
         public Awaitable InitializeAsync(AppContext context)
         {
-            _logger = context.Logger;
-            
             LoadRequestsFromDisk();
 
             ProcessSaveQueueAsync(_saveQueueCts.Token)
@@ -126,10 +121,6 @@ namespace CylSDK.Core.UserData
                     var saveRequest = _saveQueue[0];
                     _saveQueue.RemoveAt(0);
                     await _userDataProvider.WriteUserDataAsync(saveRequest.userDataSnapshot, _userDataSerializer);
-
-                    _logger?.LogInfo(_saveQueue.Count == 0
-                        ? "All save requests processed successfully."
-                        : $"Processed save request from {saveRequest.requestTime}. {_saveQueue.Count} remaining.");
                 }
 
                 // Wait for a short period before checking the queue again
@@ -162,16 +153,10 @@ namespace CylSDK.Core.UserData
                         requestTime = request.requestTime
                     });
                 }
-                else
-                {
-                    _logger?.LogError($"Invalid user data type in saved request: {request.userDataSnapshot.GetType()}");
-                }
             }
             
             // Sort queue by request time to ensure the oldest requests are processed first
             _saveQueue.Sort((a, b) => a.requestTime.CompareTo(b.requestTime));
-            
-            _logger?.LogInfo($"Loaded {_saveQueue.Count} save requests from disk.");
             _saveRequestsLoader.Clear();
         }
         
@@ -183,7 +168,6 @@ namespace CylSDK.Core.UserData
         {
             _saveQueue.Clear();
             _saveRequestsLoader.Clear();
-            _logger?.LogInfo("Editor cleared save requests.");
         }
 #endif
     }
